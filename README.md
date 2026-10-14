@@ -55,18 +55,43 @@ A *low day* is one clearly worse than usual for that athlete: at or below their 
 
 Recent readiness dominates, followed by today's training load, resting heart rate, chronic load and sleep. This matches practice: an athlete's recent trend is the strongest signal, and load and recovery markers adjust it.
 
+## Running it like a production model
+
+The analysis above runs once. A real monitoring system runs every day for months, so the project is being extended step by step:
+
+- [x] **Model versioning** – `train.py` trains the low-readiness classifier and saves it as a new version with a model card
+- [ ] Prediction API
+- [ ] Performance and data-drift monitoring
+- [ ] Automated retraining pipeline
+
+### Model versioning (`train.py`, `src/registry.py`)
+
+```bash
+python train.py --data data/raw            # train and register a new version
+python train.py --data data/raw --promote  # ...and put it in production
+```
+
+Each run creates `models/registry/<version>/` with:
+- `model.joblib`: the fitted model
+- `metadata.json`: the **model card**: training data (athletes, dates, low-day rate), feature list, each athlete's personal low-day threshold, held-out evaluation scores next to the best simple baseline, a statistical profile of every feature (used later for drift monitoring), and the software versions and git commit
+
+`models/production.json` points to the version in production and remembers the previous one, so rolling back is a single promotion. Training happens in two stages: the model is first scored on unseen future days (those scores go into the model card), then refit on all labelled data for production.
+
 ## Project structure
 
 ```
-├── run_pipeline.py          # runs everything: load → features → models → figures
+├── run_pipeline.py          # analysis: load → features → models → figures
+├── train.py                 # train + version the production model
 ├── src/
 │   ├── load_data.py         # reads PMData files into one daily table per athlete
 │   ├── features.py          # load, ACWR, monotony, baselines, next-day target
 │   ├── model.py             # models, baselines, temporal and leave-one-athlete-out evaluation
-│   └── plots.py             # README figures
+│   ├── plots.py             # README figures
+│   └── registry.py          # versioned model storage + production pointer
 ├── tests/
 │   ├── make_synthetic_pmdata.py   # fake data in PMData format, for testing only
 │   └── test_pipeline.py
+├── models/                  # model versions and the production pointer
 └── reports/                 # figures, results.md, Power BI export
 ```
 

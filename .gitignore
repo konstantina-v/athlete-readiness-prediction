@@ -1,0 +1,8 @@
+# Raw data is not redistributed here - download PMData yourself (see README)
+data/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+.venv/
+reports/athlete_daily_features.csv
